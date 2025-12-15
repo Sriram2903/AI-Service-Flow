@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="AI-powered IT service desk with multi-ticket creation, smart routing, and enterprise-grade support management" />
+  <meta name="keywords" content="AI, IT Support, Service Desk, Multi-ticket, AWS, Bedrock, Enterprise" />
+  <meta name="author" content="AI ServiceFlow" />
+  <title>AI ServiceFlow - Enterprise Service Desk</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="styles.css"/>
+  
+  <!-- Preconnect for performance -->
+  <link rel="preconnect" href="https://sdk.amazonaws.com">
+  <link rel="preconnect" href="https://unpkg.com">
+  
+  <!-- AWS SDKs -->
+  <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1396.0.min.js"></script>
+  <script src="https://unpkg.com/amazon-cognito-identity-js@6.3.12/dist/amazon-cognito-identity.min.js"></script>
+</head>
+<body>
+  <!-- Authentication Container -->
+  <div class="auth-container" id="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="auth-icon">🤖</div>
+        <h1>AI ServiceFlow</h1>
+        <p>🚀 Enterprise Service Desk with Multi-Ticket AI</p>
+      </div>
+      
+      <div class="auth-tabs">
+        <button class="tab-btn active" id="login-tab" type="button">Login</button>
+        <button class="tab-btn" id="signup-tab" type="button">Sign Up</button>
+      </div>
+      
+      <!-- Login Form -->
+      <form class="auth-form" id="login-form" novalidate>
+        <div class="form-group">
+          <input 
+            type="email" 
+            class="form-input" 
+            id="login-email" 
+            placeholder="Email Address" 
+            required 
+            autocomplete="email"
+            aria-label="Email Address"
+          />
+        </div>
+        <div class="form-group password-group">
+          <input 
+            type="password" 
+            class="form-input" 
+            id="login-password" 
+            placeholder="Password" 
+            required 
+            autocomplete="current-password"
+            aria-label="Password"
+          />
+          <span class="password-toggle" aria-label="Toggle password visibility">👁</span>
+        </div>
+        <div class="forgot-password">
+          <a href="#" id="forgot-password-link">Forgot Password?</a>
+        </div>
+        <button type="button" class="auth-btn" id="login-btn">Login</button>
+        <div class="auth-status" id="login-status" role="status" aria-live="polite"></div>
+      </form>
+      
+      <!-- Sign Up Form -->
+      <form class="auth-form hidden" id="signup-form" novalidate>
+        <div class="form-group">
+          <input 
+            type="email" 
+            class="form-input" 
+            id="signup-email" 
+            placeholder="Email Address" 
+            required 
+            autocomplete="email"
+            aria-label="Email Address"
+          />
+        </div>
+        <div class="form-group password-group">
+          <input 
+            type="password" 
+            class="form-input" 
+            id="signup-password" 
+            placeholder="Password (8+ chars with symbols)" 
+            required 
+            autocomplete="new-password"
+            aria-label="New Password"
+          />
+          <span class="password-toggle" aria-label="Toggle password visibility">👁</span>
+        </div>
+        <div class="form-group password-group">
+          <input 
+            type="password" 
+            class="form-input" 
+            id="signup-confirm" 
+            placeholder="Confirm Password" 
+            required 
+            autocomplete="new-password"
+            aria-label="Confirm Password"
+          />
+          <span class="password-toggle" aria-label="Toggle password visibility">👁</span>
+        </div>
+        <button type="button" class="auth-btn" id="signup-btn">Sign Up</button>
+        <div class="auth-status" id="signup-status" role="status" aria-live="polite"></div>
+      </form>
+      
+      <!-- Verification form is injected dynamically -->
+    </div>
+  </div>
+
+  <!-- Main Application -->
+  <div class="main-app" style="display: none;">
+    <!-- Header -->
+    <header class="dashboard-header">
+      <div class="header-left">
+        <div class="logo">🤖 AI ServiceFlow</div>
+        <div class="subtitle">Enterprise Service Desk Management</div>
+      </div>
+      <div class="header-right">
+        <span class="user-welcome">Welcome</span>
+        <button class="theme-toggle-btn" onclick="aiServiceFlow.toggleTheme()" title="Toggle Light/Dark Theme" aria-label="Toggle theme">
+          <span class="theme-icon">🌙</span>
+        </button>
+        <button class="logout-btn" id="logout-btn" type="button">🚪 Logout</button>
+      </div>
+    </header>
+
+    <!-- Enhanced Navigation with Multi-Ticket Support -->
+    <nav class="app-navigation">
+      <div class="main-nav">
+        <button class="nav-btn active" data-section="ticket-creator" type="button">🎫 Smart Ticket Creator</button>
+        <button class="nav-btn" data-section="tickets-dashboard" type="button">📋 Service Tickets</button>
+        <button class="nav-btn" data-section="ai-troubleshoot" type="button">🤖 AI Assistant</button>
+        <button class="nav-btn" data-section="knowledge-base" type="button">📚 Knowledge Base</button>
+      </div>
+    </nav>
+
+    <!-- ENHANCED: AI Multi-Ticket Creator Section -->
+    <main class="app-section active" id="ticket-creator">
+      <div class="section-header">
+        <h2>🎫 AI-Powered Multi-Ticket Creation</h2>
+        <p>Describe single or multiple issues and let AI create professional support tickets instantly</p>
+      </div>
+      
+      <div class="ticket-creator-layout">
+        <!-- Enhanced Issue Input Panel -->
+        <div class="issue-input-panel">
+          <div class="input-header">
+            <h3>📝 Describe Your Issue(s)</h3>
+            <p>💡 You can describe multiple problems at once - AI will detect and separate them automatically!</p>
+          </div>
+          
+          <div class="smart-input-area">
+            <textarea 
+              id="issue-description" 
+              placeholder="Examples:
+• Single Issue: 'My laptop won't start when I press the power button'
+• Multiple Issues: 'I need password reset for email AND my printer is jamming'
+• List Format: '1. WiFi keeps dropping 2. Outlook crashes 3. Computer making noise'
+• Narrative: 'Several problems today: first my password expired, also the office printer stopped working, plus my screen started flickering'"
+              rows="8"
+              aria-label="Issue description"
+            ></textarea>
+                       
+            <div class="action-buttons">
+              <button id="analyze-issue-btn" class="analyze-btn" type="button" onclick="analyzeIssue()">
+                🧠 Analyze with AI
+              </button>
+              <button id="clear-input-btn" class="clear-btn" type="button" onclick="clearInput()">
+                🗑️ Clear
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Enhanced AI Analysis Panel -->
+        <div class="ai-analysis-panel">
+          <div class="analysis-header">
+            <h3>🤖 AI Analysis Results</h3>
+            <p>Smart detection of single or multiple issues</p>
+          </div>
+          
+          <div id="ai-analysis-results" class="analysis-results">
+            <div class="analysis-placeholder">
+              <div class="placeholder-icon">🤖</div>
+              <p><strong>🚀 Enhanced AI Ticket Creation:</strong></p>
+              <ul>
+                <li data-icon="📝">Describe single or multiple issues in natural language</li>
+                <li data-icon="🧠">AI automatically detects and separates multiple problems</li>
+                <li data-icon="🎯">Creates individual tickets with proper categorization</li>
+                <li data-icon="⚡">Handles complex scenarios like numbered lists and narratives</li>
+                <li data-icon="✅">Generates professional support tickets in seconds</li>
+              </ul>
+              <p><strong>💡 Pro Tip:</strong> You can describe multiple issues at once using phrases like "Also", "Additionally", or numbered lists!</p>
+            </div>
+          </div>
+          
+          <!-- Enhanced Ticket Preview (supports both single and multi) -->
+          <div id="ticket-preview" class="ticket-preview" style="display: none;">
+            <div class="preview-header">
+              <h4>📋 Generated Ticket Preview</h4>
+              <span class="ai-badge">🤖 AI Generated</span>
+            </div>
+            
+            <div class="preview-content">
+              <div class="preview-field">
+                <label>📌 Subject:</label>
+                <span id="preview-subject"></span>
+              </div>
+              <div class="preview-row">
+                <div class="preview-field">
+                  <label>📂 Category:</label>
+                  <span id="preview-category" class="category-badge"></span>
+                </div>
+                <div class="preview-field">
+                  <label>⚡ Priority:</label>
+                  <span id="preview-priority" class="priority-badge"></span>
+                </div>
+              </div>
+              <div class="preview-row">
+                <div class="preview-field">
+                  <label>🎯 Problem Type:</label>
+                  <span id="preview-problem-type"></span>
+                </div>
+                <div class="preview-field">
+                  <label>👥 Assigned Team:</label>
+                  <span id="preview-team"></span>
+                </div>
+              </div>
+              <div class="preview-field">
+                <label>📝 Enhanced Description:</label>
+                <p id="preview-description"></p>
+              </div>
+              <div class="preview-field">
+                <label>⏱️ Estimated Resolution:</label>
+                <span id="preview-resolution-time"></span>
+              </div>
+              <div class="preview-field">
+                <label>💡 Quick Fixes to Try:</label>
+                <ul id="preview-quick-fixes"></ul>
+              </div>
+            </div>
+            
+            <div class="preview-actions">
+              <button id="create-ticket-btn" class="create-btn" type="button" onclick="createFinalTicket()">
+                ✅ Create This Ticket
+              </button>
+              <button id="analyze-again-btn" class="secondary-btn" type="button" onclick="clearInput()">
+                🔄 Start Over
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Enhanced Service Tickets Section -->
+    <section class="app-section" id="tickets-dashboard" style="display: none;">
+      <div class="section-header">
+        <h2>📋 Service Tickets Dashboard</h2>
+        <p>Real-time ticket management with multi-ticket batch support</p>
+      </div>
+      
+      <div class="main-content">
+        <div class="tickets-panel">
+          <div class="panel-header">
+            <h2>🎫 All Service Tickets</h2>
+            <p>Including multi-ticket batches from AI analysis</p>
+          </div>
+          
+          <div class="ticket-filters">
+            <div class="search-container">
+              <input 
+                type="text" 
+                id="ticket-search" 
+                placeholder="Search Ticket ID, Subject, or Keywords..." 
+                autocomplete="off"
+                aria-label="Search tickets"
+              />
+              <button id="search-btn" type="button" aria-label="Search tickets">🔍</button>
+            </div>
+            <div class="filter-buttons">
+              <button class="filter-btn active" data-status="all" type="button">All Tickets</button>
+              <button class="filter-btn" data-status="open" type="button">Open</button>
+              <button class="filter-btn" data-status="progress" type="button">In Progress</button>
+              <button class="filter-btn" data-status="closed" type="button">Resolved</button>
+            </div>
+          </div>
+          
+          <div class="tickets-grid" id="tickets-container">
+            <div class="loading-state">📊 Loading tickets from database...</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Enhanced AI Assistant Section -->
+    <section class="app-section" id="ai-troubleshoot" style="display: none;">
+      <div class="section-header">
+        <h2>🤖 AI Troubleshooting Assistant</h2>
+        <p>Get instant help with knowledge base integration and multi-issue support</p>
+      </div>
+      
+      <div class="main-content">
+        <div class="chat-panel">
+          <div class="panel-header">
+            <h2>💬 Intelligent Support Chat</h2>
+            <p>Powered by AWS Bedrock with enterprise knowledge base</p>
+          </div>
+          
+          <div class="chat-messages" id="chat-messages" role="log" aria-live="polite" aria-label="Chat messages">
+            <!-- Chat messages will be populated here -->
+          </div>
+          
+          <div class="chat-input-container">
+            <div class="input-group">
+              <input 
+                type="text" 
+                id="chat-input" 
+                placeholder="Ask about IT issues, describe multiple problems, or get help with tickets..."
+                autocomplete="off"
+                aria-label="Chat input"
+              />
+              <button id="send-btn" type="button" aria-label="Send message">🚀</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEW: Knowledge Base Section -->
+    <section class="app-section" id="knowledge-base" style="display: none;">
+      <div class="section-header">
+        <h2>📚 IT Knowledge Base</h2>
+        <p>Comprehensive guides and resources for self-service support</p>
+      </div>
+      
+      <div class="main-content">
+        <div class="knowledge-panel">
+          <div class="panel-header">
+            <h2>🧠 Knowledge Resources</h2>
+            <p>Everything you need to solve common IT issues</p>
+          </div>
+          
+          <!-- Knowledge Base Search -->
+          <div class="knowledge-search">
+            <div class="search-container">
+              <input 
+                type="text" 
+                id="knowledge-search" 
+                placeholder="Search knowledge base articles..." 
+                autocomplete="off"
+                aria-label="Search knowledge base"
+              />
+              <button id="knowledge-search-btn" type="button" aria-label="Search knowledge base">🔍</button>
+            </div>
+          </div>
+          
+          <!-- Knowledge Categories -->
+          <div class="knowledge-categories">
+            <!-- User Guides Section -->
+            <div class="knowledge-section">
+              <h3>👤 User Guides</h3>
+              <div class="resource-grid">
+                <div class="resource-card" data-category="guide">
+                  <div class="resource-icon">📖</div>
+                  <h4>Complete IT User Guide</h4>
+                  <p>Comprehensive guide covering basic computer operations, software usage, and common troubleshooting steps for all employees</p>
+                  <div class="resource-tags">
+                    <span class="tag">Beginner Friendly</span>
+                    <span class="tag">Essential</span>
+                  </div>
+                  <button class="download-btn" type="button" onclick="viewResource('user-guide')">📥 View Guide</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Troubleshooting Section -->
+            <div class="knowledge-section">
+              <h3>🔧 Troubleshooting Guides</h3>
+              <div class="resource-grid">
+                <div class="resource-card" data-category="troubleshooting">
+                  <div class="resource-icon">🛠️</div>
+                  <h4>Complete Troubleshooting Guide</h4>
+                  <p>Step-by-step solutions for hardware, software, and network issues. Perfect for self-service resolution of common problems</p>
+                  <div class="resource-tags">
+                    <span class="tag">Technical</span>
+                    <span class="tag">Comprehensive</span>
+                  </div>
+                  <button class="download-btn" type="button" onclick="viewResource('troubleshooting')">📥 View Guide</button>
+                </div>
+
+                <div class="resource-card" data-category="faq">
+                  <div class="resource-icon">❓</div>
+                  <h4>FAQ & Common Issues</h4>
+                  <p>Frequently asked questions and solutions to the most common IT problems reported by users across the organization</p>
+                  <div class="resource-tags">
+                    <span class="tag">Quick Reference</span>
+                    <span class="tag">Popular</span>
+                  </div>
+                  <button class="download-btn" type="button" onclick="viewResource('faq')">📥 View FAQ</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Policies Section -->
+            <div class="knowledge-section">
+              <h3>📋 Policies & Procedures</h3>
+              <div class="resource-grid">
+                <div class="resource-card" data-category="policy">
+                  <div class="resource-icon">📜</div>
+                  <h4>Company IT Policies</h4>
+                  <p>Official IT policies, acceptable use guidelines, and security requirements that all employees must follow</p>
+                  <div class="resource-tags">
+                    <span class="tag">Required Reading</span>
+                    <span class="tag">Policy</span>
+                  </div>
+                  <button class="download-btn" type="button" onclick="viewResource('policies')">📥 View Policies</button>
+                </div>
+
+                <div class="resource-card" data-category="procedure">
+                  <div class="resource-icon">📊</div>
+                  <h4>Ticket Management Procedures</h4>
+                  <p>Guidelines for creating, tracking, and managing IT support tickets effectively through our service desk system</p>
+                  <div class="resource-tags">
+                    <span class="tag">Process</span>
+                    <span class="tag">Management</span>
+                  </div>
+                  <button class="download-btn" type="button" onclick="viewResource('ticket-procedures')">📥 View Procedures</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Reference -->
+            <div class="knowledge-section">
+              <h3>⚡ Quick Reference</h3>
+              <div class="quick-links">
+                <a href="#" class="quick-link" onclick="showQuickReference('password_reset')" role="button" tabindex="0">
+                  <span class="quick-icon">🔐</span>
+                  Password Reset Steps
+                </a>
+                <a href="#" class="quick-link" onclick="showQuickReference('wifi_setup')" role="button" tabindex="0">
+                  <span class="quick-icon">📶</span>
+                  WiFi Setup Guide
+                </a>
+                <a href="#" class="quick-link" onclick="showQuickReference('printer_setup')" role="button" tabindex="0">
+                  <span class="quick-icon">🖨️</span>
+                  Printer Installation
+                </a>
+                <a href="#" class="quick-link" onclick="showQuickReference('vpn_setup')" role="button" tabindex="0">
+                  <span class="quick-icon">🔒</span>
+                  VPN Connection Guide
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Enhanced Toast Notification System -->
+  <div class="notification" style="display:none;" role="alert" aria-live="assertive"></div>
+
+  <!-- Resource Modal (for knowledge base) -->
+  <div id="resource-modal" class="resource-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-title">Resource</h2>
+        <button class="close-btn" type="button" onclick="closeResourceModal()" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <!-- Resource content will be loaded here -->
+      </div>
+      <div class="modal-footer">
+        <button class="primary-btn" type="button" onclick="downloadResource()">📄 Download</button>
+        <button class="secondary-btn" type="button" onclick="closeResourceModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enhanced JavaScript Integration -->
+  <script>
+    // Global functions for knowledge base and ticket creator
+    window.viewResource = function(resourceType) {
+      console.log('Viewing resource:', resourceType);
+    };
+
+    window.showQuickReference = function(refType) {
+      console.log('Showing quick reference:', refType);
+    };
+
+    window.closeResourceModal = function() {
+      const modal = document.getElementById('resource-modal');
+      if (modal) {
+        modal.style.display = 'none';
+      }
+    };
+
+    window.downloadResource = function() {
+      console.log('Downloading resource');
+    };
+
+    window.fillIssue = function(issueText) {
+      console.log('Filling issue:', issueText);
+    };
+
+    window.clearInput = function() {
+      console.log('Clearing input');
+    };
+
+    window.analyzeIssue = function() {
+      console.log('Analyzing issue');
+    };
+
+    window.createFinalTicket = function() {
+      console.log('Creating final ticket');
+    };
+
+    // Enhanced accessibility
+    document.addEventListener('keydown', function(e) {
+      // ESC key to close modals
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('resource-modal');
+        if (modal && modal.style.display !== 'none') {
+          closeResourceModal();
+        }
+      }
+    });
+
+    // Enhanced keyboard navigation for quick links
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        const activeElement = document.activeElement;
+        if (activeElement && activeElement.classList.contains('quick-link')) {
+          e.preventDefault();
+          activeElement.click();
+        }
+      }
+    });
+
+    // Performance monitoring
+    window.addEventListener('load', function() {
+      console.log('🚀 AI ServiceFlow loaded successfully');
+      
+      // Log performance metrics
+      if (window.performance && window.performance.timing) {
+        const timing = window.performance.timing;
+        const totalTime = timing.loadEventEnd - timing.navigationStart;
+        console.log(`📊 Total load time: ${totalTime}ms`);
+      }
+    });
+
+    // Error handling for unhandled JavaScript errors
+    window.addEventListener('error', function(e) {
+      console.error('🚨 Unhandled error:', e.error);
+      
+      // Show user-friendly notification for critical errors
+      const notification = document.querySelector('.notification');
+      if (notification && e.error) {
+        notification.textContent = 'An unexpected error occurred. Please refresh the page.';
+        notification.className = 'notification error';
+        notification.style.display = 'block';
+        setTimeout(() => notification.style.display = 'none', 5000);
+      }
+    });
+
+    // Service Worker registration for offline support (optional)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        // Uncomment to enable service worker
+        // navigator.serviceWorker.register('/sw.js')
+        //   .then(registration => console.log('SW registered:', registration))
+        //   .catch(error => console.log('SW registration failed:', error));
+      });
+    }
+  </script>
+
+  <!-- Main Application Script -->
+  <script src="script.js"></script>
+
+  <!-- Schema.org structured data for SEO -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "AI ServiceFlow",
+    "description": "Enterprise AI-powered IT service desk with multi-ticket creation and smart routing",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web Browser",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "AI ServiceFlow"
+    }
+  }
+  </script>
+</body>
+</html>
